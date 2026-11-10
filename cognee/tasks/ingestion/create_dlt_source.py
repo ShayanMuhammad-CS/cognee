@@ -210,19 +210,20 @@ def _require_database_ingestion_allowed() -> None:
 
     The server connects with its own network position, so a caller who can name a
     database can read any one the server reaches. Unset (the default), the SDK, CLI
-    and MCP server may ingest a database and the API server may not: its callers
-    are whoever can register. ``true`` allows every surface; ``false`` refuses all.
+    and MCP server over stdio may ingest a database, and a network caller (an API
+    request, MCP over sse / streamable http) may not: those callers are whoever
+    can reach the server. ``true`` allows every caller; ``false`` refuses all.
     """
     from cognee.exceptions import CogneeValidationError
-    from cognee.modules.operations import ORIGIN_API, get_operation_origin
+    from cognee.modules.operations import is_remote_caller
     from cognee.tasks.web_scraper.ssrf_protection import _FALSEY
 
     value = (os.getenv(ALLOW_DATABASE_INGESTION_ENV) or "").strip().lower()
     if not value:
-        if get_operation_origin() == ORIGIN_API:
+        if is_remote_caller():
             raise CogneeValidationError(
                 message="Ingesting a database from a connection string is not enabled for "
-                f"API callers on this server (set {ALLOW_DATABASE_INGESTION_ENV}=true to "
+                f"network callers on this server (set {ALLOW_DATABASE_INGESTION_ENV}=true to "
                 "allow it).",
                 name="DatabaseIngestionDisabled",
             )
